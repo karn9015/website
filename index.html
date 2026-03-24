@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ShipFlow — Logistics Management</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#0f1117;--bg2:#171b24;--bg3:#1e2330;--bg4:#252b38;
+--border:#2d3444;--border2:#3a4258;
+--text:#e8ecf4;--text2:#9aa5c0;--text3:#6b7a9a;
+--accent:#6366f1;--accent2:#818cf8;--accent3:#312e81;
+--green:#10b981;--green2:#d1fae5;--greenb:#064e3b;
+--red:#ef4444;--red2:#fee2e2;--redb:#7f1d1d;
+--yellow:#f59e0b;--yellow2:#fef3c7;--yellowb:#78350f;
+--blue:#3b82f6;--blue2:#dbeafe;--blueb:#1e3a5f;
+--purple:#a855f7;--purple2:#f3e8ff;--purpleb:#3b0764;
+--radius:8px;--radius2:12px;--radius3:16px;
+--shadow:0 4px 24px rgba(0,0,0,.4);
+--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:var(--font);outline:none}
+a{text-decoration:none;color:inherit}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:12px 16px;border-radius:var(--radius);font-size:14px;font-weight:500;color:#fff;pointer-events:auto;animation:slideIn .2s ease;display:flex;align-items:center;gap:8px;min-width:260px;max-width:360px;box-shadow:var(--shadow)}
+.toast.success{background:#059669}
+.toast.error{background:#dc2626}
+.toast.info{background:#2563eb}
+.toast.warning{background:#d97706}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius3);padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-lg{max-width:760px}
+.modal h2{font-size:18px;font-weight:600;margin-bottom:20px;color:var(--text)}
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:14px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-secondary{background:var(--bg4);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border);border-color:var(--border2)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{opacity:.85}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover{opacity:.85}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.badge-pending{background:#422006;color:#fbbf24}
+.badge-shipped{background:var(--blueb);color:#93c5fd}
+.badge-delivered{background:var(--greenb);color:#6ee7b7}
+.badge-rto{background:var(--redb);color:#fca5a5}
+.badge-verified{background:var(--greenb);color:#6ee7b7}
+.badge-unverified{background:#422006;color:#fbbf24}
+.badge-rejected{background:var(--redb);color:#fca5a5}
+.badge-active{background:var(--greenb);color:#6ee7b7}
+.badge-inactive{background:var(--bg4);color:var(--text2)}
+.badge-credit{background:var(--greenb);color:#6ee7b7}
+.badge-debit{background:var(--redb);color:#fca5a5}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;color:var(--text);transition:border-color .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:var(--bg3)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;display:flex;align-items:flex-start;gap:16px}
+.stat-icon{width:44px;height:44px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.stat-label{font-size:12px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-value{font-size:26px;font-weight:700;color:var(--text);line-height:1}
+.table-wrap{overflow-x:auto;margin-top:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.sidebar{width:240px;min-height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:transform .2s}
+.sidebar-logo{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-logo .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:700}
+.sidebar-logo .logo-text{font-size:16px;font-weight:700;color:var(--text)}
+.sidebar-logo .logo-sub{font-size:10px;color:var(--text3);font-weight:400}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);padding:8px 12px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);font-size:14px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--accent3);color:var(--accent2)}
+.nav-item .nav-icon{width:18px;text-align:center;font-size:16px}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+.main-content{margin-left:240px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);position:sticky;top:0;z-index:99}
+.topbar h1{font-size:18px;font-weight:600}
+.page-content{padding:24px;flex:1}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-header h2{font-size:20px;font-weight:600}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.search-bar{padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;color:var(--text);width:260px}
+.search-bar::placeholder{color:var(--text3)}
+.search-bar:focus{border-color:var(--accent)}
+.empty-state{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-state .icon{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:15px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
+.chip.selected{background:var(--accent3);color:var(--accent2);border-color:var(--accent)}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.wallet-balance{background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4338ca;border-radius:var(--radius3);padding:24px;margin-bottom:20px}
+.wallet-balance .label{font-size:13px;color:#a5b4fc;margin-bottom:4px}
+.wallet-balance .amount{font-size:36px;font-weight:700;color:#fff;font-family:var(--mono)}
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;background:var(--bg3);padding:4px;border-radius:var(--radius);width:fit-content}
+.tab{padding:7px 16px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.kyc-banner{padding:12px 16px;border-radius:var(--radius);margin-bottom:20px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px}
+.kyc-banner.warning{background:#422006;color:#fbbf24;border:1px solid #78350f}
+.kyc-banner.danger{background:var(--redb);color:#fca5a5;border:1px solid #991b1b}
+@media(max-width:768px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.main-content{margin-left:0}
+.form-row{grid-template-columns:1fr}
+.stats-grid{grid-template-columns:1fr 1fr}
+}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-bar{height:4px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .3s}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useContext,createContext,useCallback,useRef}=React;
+
+/* ============================================================
+   STORAGE SERVICE
+   ============================================================ */
+const Storage={
+  get(key,def=null){try{const v=localStorage.getItem(key);return v?JSON.parse(v):def}catch{return def}},
+  set(key,val){try{localStorage.setItem(key,JSON.stringify(val));return true}catch{return false}},
+  update(key,fn,def=[]){const cur=this.get(key,def);const next=fn(cur);this.set(key,next);return next},
+  del(key){localStorage.removeItem(key)}
+};
+
+/* ============================================================
+   INITIAL SEED DATA
+   ============================================================ */
+function seedData(){
+  if(Storage.get('sf_seeded'))return;
+
+  Storage.set('sf_users',[
+    {id:'admin1',email:'admin@shipflow.com',password:'admin123',role:'admin',name:'Admin User',active:true},
+    {id:'client1',email:'seller@demo.com',password:'demo123',role:'client',name:'Demo Seller',active:true,
+     kyc:'verified',walletBalance:5000,company:'Demo Store',phone:'9876543210'},
+    {id:'client2',email:'newclient@demo.com',password:'demo123',role:'client',name:'New Seller',active:true,
+     kyc:'pending',walletBalance:0,company:'New Store',phone:'9123456789'},
+  ]);
+
+  Storage.set('sf_couriers',[
+    {id:'c1',name:'BlueDart',apiEndpoint:'https://api.bluedart.com',apiKey:'BD_KEY_123',
+     ratePerKg:45,active:true,logo:'🚚'},
+    {id:'c2',name:'Delhivery',apiEndpoint:'https://api.delhivery.com',apiKey:'DL_KEY_456',
+     ratePerKg:38,active:true,logo:'📦'},
+    {id:'c3',name:'DTDC',apiEndpoint:'https://api.dtdc.com',apiKey:'DTDC_KEY_789',
+     ratePerKg:35,active:true,logo:'🏎️'},
+  ]);
+
+  const now=Date.now();
+  Storage.set('sf_orders',[
+    {id:'ORD001',clientId:'client1',customerName:'Rahul Sharma',phone:'9811111111',
+     address:'123 MG Road, Bangalore',pincode:'560001',codAmount:599,weight:0.5,
+     status:'delivered',createdAt:now-5*864e5},
+    {id:'ORD002',clientId:'client1',customerName:'Priya Singh',phone:'9822222222',
+     address:'456 Park Street, Mumbai',pincode:'400001',codAmount:0,weight:1.2,
+     status:'shipped',createdAt:now-2*864e5},
+    {id:'ORD003',clientId:'client1',customerName:'Amit Kumar',phone:'9833333333',
+     address:'789 Anna Nagar, Chennai',pincode:'600040',codAmount:1299,weight:2.0,
+     status:'pending',createdAt:now-864e5},
+    {id:'ORD004',clientId:'client1',customerName:'Sunita Patel',phone:'9844444444',
+     address:'321 Sector 15, Noida',pincode:'201301',codAmount:249,weight:0.3,
+     status:'rto',createdAt:now-7*864e5},
+  ]);
+
+  Storage.set('sf_shipments',[
+    {id:'SHP001',orderId:'ORD001',clientId:'client1',awb:'BDFL1234567890',
+     courierId:'c1',courierName:'BlueDart',status:'delivered',createdAt:now-5*864e5,charge:67},
+    {id:'SHP002',orderId:'ORD002',clientId:'client1',awb:'DL9876543210',
+     courierId:'c2',courierName:'Delhivery',status:'shipped',createdAt:now-2*864e5,charge:46},
+    {id:'SHP003',orderId:'ORD004',clientId:'client1',awb:'DTDC5555555555',
+     courierId:'c3',courierName:'DTDC',status:'rto',createdAt:now-7*864e5,charge:42},
+  ]);
+
+  Storage.set('sf_warehouses',[
+    {id:'wh1',clientId:'client1',name:'Main Warehouse',address:'Plot 5, Industrial Area',
+     phone:'9800000001',pincode:'110001',city:'Delhi',active:true},
+  ]);
+
+  Storage.set('sf_wallet_txns',[
+    {id:'tx1',clientId:'client1',type:'credit',amount:5000,balance:5000,
+     description:'Initial wallet top-up by Admin',date:now-10*864e5},
+    {id:'tx2',clientId:'client1',type:'debit',amount:67,balance:4933,
+     description:'Shipment SHP001 - BlueDart',date:now-5*864e5},
+    {id:'tx3',clientId:'client1',type:'debit',amount:46,balance:4887,
+     description:'Shipment SHP002 - Delhivery',date:now-2*864e5},
+    {id:'tx4',clientId:'client1',type:'credit',amount:113,balance:5000,
+     description:'RTO credit - SHP003',date:now-864e5},
+  ]);
+
+  Storage.set('sf_logs',[
+    {id:'log1',clientId:'client1',orderId:'ORD001',type:'order_created',msg:'Order ORD001 created',date:now-5*864e5},
+    {id:'log2',clientId:'client1',orderId:'ORD001',type:'shipment_created',msg:'Shipment created with BlueDart AWB BDFL1234567890',date:now-5*864e5},
+    {id:'log3',clientId:'client1',orderId:'ORD001',type:'status_changed',msg:'Status changed to delivered',date:now-3*864e5},
+  ]);
+
+  Storage.set('sf_seeded',true);
+}
+seedData();
+
+/* ============================================================
+   SERVICES
+   ============================================================ */
+const genId=(prefix)=>`${prefix}${Date.now().toString(36).toUpperCase()}`;
+const fmtDate=(ts)=>new Date(ts).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+const fmtCur=(n)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n);
+
+const AuthService={
+  login(email,pass){
+    const users=Storage.get('sf_users',[]);
+    const u=users.find(x=>x.email===email&&x.password===pass);
+    if(!u)return{ok:false,msg:'Invalid credentials'};
+    if(!u.active)return{ok:false,msg:'Account disabled'};
+    Storage.set('sf_session',{userId:u.id,role:u.role,name:u.name,email:u.email});
+    return{ok:true,user:u};
+  },
+  logout(){Storage.del('sf_session')},
+  getSession(){return Storage.get('sf_session')},
+  getUser(id){return Storage.get('sf_users',[]).find(u=>u.id===id)},
+  updateUser(id,data){Storage.update('sf_users',us=>us.map(u=>u.id===id?{...u,...data}:u));},
+};
+
+const OrderService={
+  getAll(clientId=null){
+    const all=Storage.get('sf_orders',[]);
+    return clientId?all.filter(o=>o.clientId===clientId):all;
+  },
+  create(data){
+    const o={...data,id:genId('ORD'),status:'pending',createdAt:Date.now()};
+    Storage.update('sf_orders',os=>[...os,o]);
+    LogService.add(o.clientId,o.id,'order_created',`Order ${o.id} created for ${o.customerName}`);
+    return o;
+  },
+  bulkCreate(items,clientId){
+    return items.map(row=>this.create({...row,clientId}));
+  },
+  update(id,data){Storage.update('sf_orders',os=>os.map(o=>o.id===id?{...o,...data}:o));},
+  getById(id){return Storage.get('sf_orders',[]).find(o=>o.id===id)},
+};
+
+const ShipmentService={
+  getAll(clientId=null){
+    const all=Storage.get('sf_shipments',[]);
+    return clientId?all.filter(s=>s.clientId===clientId):all;
+  },
+  create(orderId,clientId){
+    const couriers=Storage.get('sf_couriers',[]).filter(c=>c.active);
+    if(!couriers.length)return{ok:false,msg:'No active couriers'};
+    const courier=couriers.reduce((a,b)=>a.ratePerKg<b.ratePerKg?a:b);
+    const order=OrderService.getById(orderId);
+    if(!order)return{ok:false,msg:'Order not found'};
+    const charge=Math.ceil(courier.ratePerKg*Math.max(order.weight,0.5));
+    const user=AuthService.getUser(clientId);
+    if(!user)return{ok:false,msg:'Client not found'};
+    if(user.kyc!=='verified')return{ok:false,msg:'KYC verification required before shipping'};
+    if(user.walletBalance<charge)return{ok:false,msg:`Insufficient wallet balance. Required ₹${charge}`};
+    const awb=`${courier.name.substring(0,2).toUpperCase()}${Date.now().toString().slice(-10)}`;
+    const shp={id:genId('SHP'),orderId,clientId,awb,courierId:courier.id,
+      courierName:courier.name,status:'shipped',createdAt:Date.now(),charge};
+    Storage.update('sf_shipments',ss=>[...ss,shp]);
+    OrderService.update(orderId,{status:'shipped'});
+    WalletService.debit(clientId,charge,`Shipment ${shp.id} - ${courier.name}`);
+    LogService.add(clientId,orderId,'shipment_created',`Shipment created AWB:${awb} via ${courier.name}`);
+    return{ok:true,shipment:shp};
+  },
+  updateStatus(id,status){
+    Storage.update('sf_shipments',ss=>ss.map(s=>{
+      if(s.id!==id)return s;
+      const shp={...s,status};
+      const ord=OrderService.getById(s.orderId);
+      if(ord)OrderService.update(ord.id,{status});
+      LogService.add(s.clientId,s.orderId,'status_changed',`Status → ${status} for AWB ${s.awb}`);
+      return shp;
+    }));
+  },
+};
+
+const WalletService={
+  getBalance(clientId){return AuthService.getUser(clientId)?.walletBalance||0},
+  getTxns(clientId=null){
+    const all=Storage.get('sf_wallet_txns',[]);
+    return clientId?all.filter(t=>t.clientId===clientId):all;
+  },
+  credit(clientId,amount,desc){
+    const u=AuthService.getUser(clientId);
+    if(!u)return;
+    const newBal=(u.walletBalance||0)+amount;
+    AuthService.updateUser(clientId,{walletBalance:newBal});
+    const tx={id:genId('TX'),clientId,type:'credit',amount,balance:newBal,description:desc,date:Date.now()};
+    Storage.update('sf_wallet_txns',ts=>[...ts,tx]);
+    return newBal;
+  },
+  debit(clientId,amount,desc){
+    const u=AuthService.getUser(clientId);
+    if(!u)return;
+    const newBal=(u.walletBalance||0)-amount;
+    AuthService.updateUser(clientId,{walletBalance:newBal});
+    const tx={id:genId('TX'),clientId,type:'debit',amount,balance:newBal,description:desc,date:Date.now()};
+    Storage.update('sf_wallet_txns',ts=>[...ts,tx]);
+    return newBal;
+  },
+};
+
+const CourierService={
+  getAll(){return Storage.get('sf_couriers',[])},
+  create(data){
+    const c={...data,id:genId('COR')};
+    Storage.update('sf_couriers',cs=>[...cs,c]);
+    return c;
+  },
+  update(id,data){Storage.update('sf_couriers',cs=>cs.map(c=>c.id===id?{...c,...data}:c));},
+  toggle(id){Storage.update('sf_couriers',cs=>cs.map(c=>c.id===id?{...c,active:!c.active}:c));},
+};
+
+const LogService={
+  add(clientId,orderId,type,msg){
+    const log={id:genId('LOG'),clientId,orderId,type,msg,date:Date.now()};
+    Storage.update('sf_logs',ls=>[ls.length>500?ls.slice(-499):[...ls],log].flat());
+    return log;
+  },
+  getAll(){return Storage.get('sf_logs',[]).reverse()},
+  getByClient(clientId){return this.getAll().filter(l=>l.clientId===clientId)},
+};
+
+const WarehouseService={
+  getAll(clientId=null){
+    const all=Storage.get('sf_warehouses',[]);
+    return clientId?all.filter(w=>w.clientId===clientId):all;
+  },
+  create(data){
+    const w={...data,id:genId('WH'),active:true};
+    Storage.update('sf_warehouses',ws=>[...ws,w]);
+    return w;
+  },
+  update(id,data){Storage.update('sf_warehouses',ws=>ws.map(w=>w.id===id?{...w,...data}:w));},
+};
+
+/* ============================================================
+   TOAST CONTEXT
+   ============================================================ */
+const ToastCtx=createContext(null);
+function ToastProvider({children}){
+  const [toasts,setToasts]=useState([]);
+  const add=useCallback((msg,type='info')=>{
+    const id=Date.now();
+    setToasts(t=>[...t,{id,msg,type}]);
+    setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),3500);
+  },[]);
+  return(
+    <ToastCtx.Provider value={add}>
+      {children}
+      <div className="toast-container">
+        {toasts.map(t=>(
+          <div key={t.id} className={`toast ${t.type}`}>
+            <span>{t.type==='success'?'✓':t.type==='error'?'✕':t.type==='warning'?'⚠':'ℹ'}</span>
+            {t.msg}
+          </div>
+        ))}
+      </div>
+    </ToastCtx.Provider>
+  );
+}
+const useToast=()=>useContext(ToastCtx);
+
+/* ============================================================
+   AUTH CONTEXT
+   ============================================================ */
+const AuthCtx=createContext(null);
+function AuthProvider({children}){
+  const [session,setSession]=useState(()=>AuthService.getSession());
+  const [userData,setUserData]=useState(()=>{
+    const s=AuthService.getSession();
+    return s?AuthService.getUser(s.userId):null;
+  });
+  const refresh=useCallback(()=>{
+    const s=AuthService.getSession();
+    setSession(s);
+    if(s)setUserData(AuthService.getUser(s.userId));
+  },[]);
+  const logout=useCallback(()=>{AuthService.logout();setSession(null);setUserData(null);},[]);
+  return<AuthCtx.Provider value={{session,userData,refresh,logout}}>{children}</AuthCtx.Provider>;
+}
+const useAuth=()=>useContext(AuthCtx);
+
+/* ============================================================
+   LOGIN PAGE
+   ============================================================ */
+function LoginPage(){
+  const [email,setEmail]=useState('');
+  const [pass,setPass]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState('');
+  const {refresh}=useAuth();
+  const toast=useToast();
+
+  function doLogin(e){
+    e.preventDefault();
+    setLoading(true);setErr('');
+    setTimeout(()=>{
+      const r=AuthService.login(email,pass);
+      if(r.ok){refresh();toast('Login successful','success');}
+      else setErr(r.msg);
+      setLoading(false);
+    },400);
+  }
+
+  function quickLogin(role){
+    const creds=role==='admin'?['admin@shipflow.com','admin123']:['seller@demo.com','demo123'];
+    setEmail(creds[0]);setPass(creds[1]);
+  }
+
+  return(
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:16}}>
+      <div style={{width:'100%',maxWidth:400}}>
+        <div style={{textAlign:'center',marginBottom:32}}>
+          <div style={{width:56,height:56,background:'linear-gradient(135deg,var(--accent),var(--purple))',borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 16px'}}>🚀</div>
+          <h1 style={{fontSize:28,fontWeight:700,marginBottom:6}}>ShipFlow</h1>
+          <p style={{color:'var(--text2)',fontSize:14}}>Logistics Management Platform</p>
+        </div>
+        <div className="card">
+          <form onSubmit={doLogin}>
+            {err&&<div style={{padding:'10px 12px',background:'var(--redb)',border:'1px solid var(--red)',borderRadius:'var(--radius)',fontSize:14,color:'#fca5a5',marginBottom:16}}>{err}</div>}
+            <div className="form-group">
+              <label>Email Address</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required/>
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" required/>
+            </div>
+            <button type="submit" className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:'11px'}} disabled={loading}>
+              {loading?<><span className="loader"/>&nbsp;Signing in…</>:'Sign In'}
+            </button>
+          </form>
+          <div className="divider"/>
+          <p style={{fontSize:12,color:'var(--text3)',marginBottom:10,textAlign:'center'}}>Quick demo access</p>
+          <div style={{display:'flex',gap:8}}>
+            <button className="btn btn-secondary" style={{flex:1,justifyContent:'center'}} onClick={()=>quickLogin('admin')}>👑 Admin</button>
+            <button className="btn btn-secondary" style={{flex:1,justifyContent:'center'}} onClick={()=>quickLogin('client')}>🏪 Seller</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   SHARED SIDEBAR
+   ============================================================ */
+function Sidebar({items,logo,active,setActive,user,logout}){
+  return(
+    <div className="sidebar">
+      <div className="sidebar-logo">
+        <div className="logo-icon">🚀</div>
+        <div>
+          <div className="logo-text">ShipFlow</div>
+          <div className="logo-sub">{logo}</div>
+        </div>
+      </div>
+      <nav className="sidebar-nav">
+        {items.map((item,i)=>(
+          item.section
+            ?<div key={i} className="nav-section">{item.section}</div>
+            :<div key={i} className={`nav-item${active===item.id?' active':''}`} onClick={()=>setActive(item.id)}>
+               <span className="nav-icon">{item.icon}</span>{item.label}
+             </div>
+        ))}
+      </nav>
+      <div className="sidebar-footer">
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+          <div style={{width:32,height:32,borderRadius:'50%',background:'var(--accent3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'var(--accent2)'}}>
+            {user?.name?.[0]||'?'}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user?.name}</div>
+            <div style={{fontSize:11,color:'var(--text3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user?.email}</div>
+          </div>
+        </div>
+        <button className="btn btn-secondary btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={logout}>Sign Out</button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   CLIENT PANEL
+   ============================================================ */
+function ClientApp(){
+  const {session,userData,refresh,logout}=useAuth();
+  const toast=useToast();
+  const [page,setPage]=useState('dashboard');
+  const [refreshKey,setRefreshKey]=useState(0);
+
+  const nav=[
+    {id:'dashboard',icon:'📊',label:'Dashboard'},
+    {section:'Shipping'},
+    {id:'orders',icon:'📋',label:'Orders'},
+    {id:'shipments',icon:'🚚',label:'Shipments'},
+    {section:'Account'},
+    {id:'warehouse',icon:'🏭',label:'Warehouses'},
+    {id:'wallet',icon:'💰',label:'Wallet'},
+    {id:'tracking',icon:'📍',label:'Track Shipment'},
+  ];
+
+  const user=AuthService.getUser(session.userId);
+  const kycStatus=user?.kyc||'pending';
+
+  const refresh2=()=>{refresh();setRefreshKey(k=>k+1)};
+
+  const pages={
+    dashboard:<ClientDashboard clientId={session.userId} key={refreshKey}/>,
+    orders:<ClientOrders clientId={session.userId} kycStatus={kycStatus} refresh={refresh2} key={refreshKey}/>,
+    shipments:<ClientShipments clientId={session.userId} key={refreshKey}/>,
+    warehouse:<ClientWarehouse clientId={session.userId} key={refreshKey}/>,
+    wallet:<ClientWallet clientId={session.userId} user={user} key={refreshKey}/>,
+    tracking:<TrackingPage/>,
+  };
+
+  return(
+    <div>
+      <Sidebar items={nav} logo="Seller Panel" active={page} setActive={setPage} user={user} logout={logout}/>
+      <div className="main-content">
+        <div className="topbar">
+          <div>
+            <h1 style={{fontSize:15,fontWeight:600}}>{nav.find(n=>n.id===page)?.label||'Dashboard'}</h1>
+            <div style={{fontSize:12,color:'var(--text3)'}}>{user?.company||user?.name}</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            {kycStatus!=='verified'&&(
+              <span style={{fontSize:12,background:'#422006',color:'#fbbf24',padding:'4px 10px',borderRadius:20,border:'1px solid #78350f'}}>
+                ⚠ KYC {kycStatus}
+              </span>
+            )}
+            <div style={{fontSize:13,color:'var(--text2)'}}>
+              💰 {fmtCur(user?.walletBalance||0)}
+            </div>
+          </div>
+        </div>
+        <div className="page-content">
+          {kycStatus==='rejected'&&(
+            <div className="kyc-banner danger">
+              🚫 Your KYC has been rejected. Please contact support to re-submit documents. Shipping is disabled.
+            </div>
+          )}
+          {kycStatus==='pending'&&(
+            <div className="kyc-banner warning">
+              ⏳ KYC verification pending. You cannot create shipments until verified by admin.
+            </div>
+          )}
+          {pages[page]||<div className="empty-state"><div className="icon">🚧</div><p>Coming soon</p></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClientDashboard({clientId}){
+  const orders=OrderService.getAll(clientId);
+  const shipments=ShipmentService.getAll(clientId);
+  const user=AuthService.getUser(clientId);
+
+  const stats=[
+    {icon:'📋',label:'Total Orders',value:orders.length,color:'#6366f1',bg:'rgba(99,102,241,.1)'},
+    {icon:'🚚',label:'Shipments',value:shipments.length,color:'#3b82f6',bg:'rgba(59,130,246,.1)'},
+    {icon:'✅',label:'Delivered',value:orders.filter(o=>o.status==='delivered').length,color:'#10b981',bg:'rgba(16,185,129,.1)'},
+    {icon:'↩',label:'RTO',value:orders.filter(o=>o.status==='rto').length,color:'#ef4444',bg:'rgba(239,68,68,.1)'},
+  ];
+
+  const recent=orders.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+
+  return(
+    <div>
+      <div className="wallet-balance" style={{marginBottom:24}}>
+        <div className="label">💰 Wallet Balance</div>
+        <div className="amount">{fmtCur(user?.walletBalance||0)}</div>
+        <div style={{fontSize:12,color:'#a5b4fc',marginTop:8}}>Available for shipping charges</div>
+      </div>
+      <div className="stats-grid">
+        {stats.map(s=>(
+          <div key={s.label} className="stat-card">
+            <div className="stat-icon" style={{background:s.bg,color:s.color}}>{s.icon}</div>
+            <div>
+              <div className="stat-label">{s.label}</div>
+              <div className="stat-value" style={{color:s.color}}>{s.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <h3 style={{fontSize:15,fontWeight:600,marginBottom:16}}>Recent Orders</h3>
+        {recent.length===0?<div className="empty-state"><div className="icon">📭</div><p>No orders yet</p></div>:(
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody>
+                {recent.map(o=>(
+                  <tr key={o.id}>
+                    <td><code style={{fontFamily:'var(--mono)',fontSize:12,color:'var(--accent2)'}}>{o.id}</code></td>
+                    <td>{o.customerName}</td>
+                    <td>{o.codAmount>0?fmtCur(o.codAmount):'Prepaid'}</td>
+                    <td><StatusBadge status={o.status}/></td>
+                    <td style={{color:'var(--text3)',fontSize:12}}>{fmtDate(o.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({status}){
+  const map={pending:'badge-pending',shipped:'badge-shipped',delivered:'badge-delivered',rto:'badge-rto'};
+  const icons={pending:'⏳',shipped:'🚚',delivered:'✅',rto:'↩'};
+  return<span className={`badge ${map[status]||'badge-pending'}`}>{icons[status]||'?'} {status?.toUpperCase()}</span>;
+}
+
+function ClientOrders({clientId,kycStatus,refresh}){
+  const toast=useToast();
+  const [orders,setOrders]=useState(()=>OrderService.getAll(clientId).sort((a,b)=>b.createdAt-a.createdAt));
+  const [showModal,setShowModal]=useState(false);
+  const [showBulk,setShowBulk]=useState(false);
+  const [loading,setLoading]=useState(false);
+  const [shipping,setShipping]=useState(null);
+  const [form,setForm]=useState({customerName:'',phone:'',address:'',pincode:'',codAmount:'',weight:''});
+  const [tab,setTab]=useState('all');
+
+  const reload=()=>setOrders(OrderService.getAll(clientId).sort((a,b)=>b.createdAt-a.createdAt));
+
+  const filtered=tab==='all'?orders:orders.filter(o=>o.status===tab);
+
+  function submitOrder(e){
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(()=>{
+      const o=OrderService.create({...form,codAmount:Number(form.codAmount)||0,weight:Number(form.weight)||0.5,clientId});
+      reload();refresh();
+      setShowModal(false);
+      setForm({customerName:'',phone:'',address:'',pincode:'',codAmount:'',weight:''});
+      toast(`Order ${o.id} created!`,'success');
+      setLoading(false);
+    },500);
+  }
+
+  function handleShip(orderId){
+    if(kycStatus!=='verified'){toast('KYC verification required','error');return;}
+    setShipping(orderId);
+    setTimeout(()=>{
+      const r=ShipmentService.create(orderId,clientId);
+      if(r.ok){toast(`Shipment created! AWB: ${r.shipment.awb}`,'success');}
+      else toast(r.msg,'error');
+      reload();refresh();
+      setShipping(null);
+    },800);
+  }
+
+  function handleBulkCSV(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    Papa.parse(file,{
+      header:true,skipEmptyLines:true,
+      complete(results){
+        const rows=results.data.map(r=>({
+          customerName:r['Customer Name']||r.customerName||'',
+          phone:r['Phone']||r.phone||'',
+          address:r['Address']||r.address||'',
+          pincode:r['Pincode']||r.pincode||'',
+          codAmount:Number(r['COD Amount']||r.codAmount||0),
+          weight:Number(r['Weight']||r.weight||0.5),
+        })).filter(r=>r.customerName);
+        if(!rows.length){toast('No valid rows found','error');return;}
+        OrderService.bulkCreate(rows,clientId);
+        reload();refresh();
+        toast(`${rows.length} orders created via CSV`,'success');
+        setShowBulk(false);
+      }
+    });
+  }
+
+  return(
+    <div>
+      <div className="page-header">
+        <h2>Orders</h2>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-secondary" onClick={()=>setShowBulk(true)}>📤 Bulk Upload</button>
+          <button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ New Order</button>
+        </div>
+      </div>
+
+      <div className="tab-bar" style={{marginBottom:16}}>
+        {['all','pending','shipped','delivered','rto'].map(t=>(
+          <div key={t} className={`tab${tab===t?' active':''}`} onClick={()=>setTab(t)}>
+            {t.charAt(0).toUpperCase()+t.slice(1)}
+            <span style={{marginLeft:6,fontSize:11,opacity:.7}}>
+              ({t==='all'?orders.length:orders.filter(o=>o.status===t).length})
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {filtered.length===0?(
+        <div className="empty-state"><div className="icon">📭</div><p>No {tab} orders</p></div>
+      ):(
+        <div className="card" style={{padding:0}}>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Pincode</th><th>COD</th><th>Weight</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+              <tbody>
+                {filtered.map(o=>(
+                  <tr key={o.id}>
+                    <td><code style={{fontFamily:'var(--mono)',fontSize:12,color:'var(--accent2)'}}>{o.id}</code></td>
+                    <td>{o.customerName}</td>
+                    <td style={{fontSize:12,color:'var(--text2)'}}>{o.phone}</td>
+                    <td style={{fontSize:12}}>{o.pincode}</td>
+                    <td>{o.codAmount>0?fmtCur(o.codAmount):<span style={{color:'var(--text3)'}}>Prepaid</span>}</td>
+                    <td>{o.weight}kg</td>
+                    <td><StatusBadge status={o.status}/></td>
+                    <td style={{fontSize:12,color:'var(--text3)'}}>{fmtDate(o.createdAt)}</td>
+                    <td>
+                      {o.status==='pending'&&(
+                        <button className="btn btn-sm btn-primary" onClick={()=>handleShip(o.id)} disabled={shipping===o.id}>
+                          {shipping===o.id?<span className="loader"/>:'🚀 Ship'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {showModal&&(
+        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h2>Create New Order</h2>
+            <form onSubmit={submitOrder}>
+              <div className="form-row">
+                <div className="form-group"><label>Customer Name *</label><input value={form.customerName} onChange={e=>setForm({...form,customerName:e.target.value})} required/></div>
+                <div className="form-group"><label>Phone *</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} required/></div>
+              </div>
+              <div className="form-group"><label>Address *</label><textarea value={form.address} onChange={e=>setForm({...form,address:e.target.value})} required rows={2} style={{resize:'vertical'}}/></div>
+              <div className="form-row">
+                <div className="form-group"><label>Pincode *</label><input value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} required/></div>
+                <div className="form-group"><label>COD Amount (₹)</label><input type="number" value={form.codAmount} onChange={e=>setForm({...form,codAmount:e.target.value})} placeholder="0 for prepaid"/></div>
+              </div>
+              <div className="form-group"><label>Weight (kg) *</label><input type="number" step="0.1" value={form.weight} onChange={e=>setForm({...form,weight:e.target.value})} required/></div>
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
+                <button type="button" className="btn btn-secondary" onClick={()=>setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={loading}>{loading?<span className="loader"/>:'Create Order'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showBulk&&(
+        <div className="modal-overlay" onClick={()=>setShowBulk(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h2>Bulk Upload Orders</h2>
+            <div style={{background:'var(--bg3)',border:'2px dashed var(--border2)',borderRadius:'var(--radius)',padding:24,textAlign:'center',marginBottom:16}}>
+              <div style={{fontSize:32,marginBottom:8}}>📤</div>
+              <p style={{fontSize:14,color:'var(--text2)',marginBottom:12}}>Upload a CSV file with columns:<br/>
+                <code style={{fontSize:12,color:'var(--accent2)'}}>Customer Name, Phone, Address, Pincode, COD Amount, Weight</code>
+              </p>
+              <input type="file" accept=".csv" onChange={handleBulkCSV} style={{color:'var(--text2)',fontSize:14}}/>
+            </div>
+            <div style={{background:'var(--bg4)',borderRadius:'var(--radius)',padding:12,fontSize:12,color:'var(--text3)'}}>
+              <strong style={{color:'var(--text2)'}}>Sample CSV row:</strong><br/>
+              <code>Rahul Sharma,9811111111,"123 MG Road, Delhi",110001,599,1.5</code>
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}>
+              <button className="btn btn-secondary" onClick={()=>setShowBulk(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientShipments({clientId}){
+  const [shipments,setShipments]=useState(()=>ShipmentService.getAll(clientId).sort((a,b)=>b.createdAt-a.createdAt));
+  const [filter,setFilter]=useState('all');
+
+  const filtered=filter==='all'?shipments:shipments.filter(s=>s.status===filter);
+
+  return(
+    <div>
+      <div className="page-header"><h2>Shipments</h2></div>
+      <div className="tab-bar">
+        {['all','shipped','delivered','rto'].map(t=>(
+          <div key={t} className={`tab${filter===t?' active':''}`} onClick={()=>setFilter(t)}>
+            {t.charAt(0).toUpperCase()+t.slice(1)}
+          </div>
+        ))}
+      </div>
+      {filtered.length===0?(
+        <div className="empty-state"><div className="icon">🚚</div><p>No shipments found</p></div>
+      ):(
+        <div className="card" style={{padding:0}}>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Shipment ID</th><th>AWB Number</th><th>Courier</th><th>Order</th><th>Status</th><th>Charge</th><th>Date</th></tr></thead>
+              <tbody>
+                {filtered.map(s=>(
+                  <tr key={s.id}>
+                    <td><code style={{fontFamily:'var(--mono)',fontSize:12,color:'var(--accent2)'}}>{s.id}</code></td>
+                    <td><code style={{fontFamily:'var(--mono)',fontSize:12}}>{s.awb}</code></td>
+                    <td><span style={{fontWeight:500}}>{s.courierName}</span></td>
+                    <td><code style={{fontFamily:'var(--mono)',fontSize:12,color:'var(--text2)'}}>{s.orderId}</code></td>
+                    <td><StatusBadge status={s.status}/></td>
+                    <td>{fmtCur(s.charge)}</td>
+                    <td style={{fontSize:12,color:'var(--text3)'}}>{fmtDate(s.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientWarehouse({clientId}){
+  const toast=useToast();
+  const [warehouses,setWarehouses]=useState(()=>WarehouseService.getAll(clientId));
+  const [showModal,setShowModal]=useState(false);
+  const [form,setForm]=useState({name:'',address:'',phone:'',pincode:'',city:''});
+
+  function submit(e){
+    e.preventDefault();
+    WarehouseService.create({...form,clientId});
+    setWarehouses(WarehouseService.getAll(clientId));
+    setShowModal(false);
+    setForm({name:'',address:'',phone:'',pincode:'',city:''});
+    toast('Warehouse added!','success');
+  }
+
+  return(
+    <div>
+      <div className="page-header">
+        <h2>Pickup Locations</h2>
+        <button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ Add Warehouse</button>
+      </div>
+      {warehouses.length===0?(
+        <div className="empty-state"><div className="icon">🏭</div><p>No pickup locations added</p></div>
+      ):(
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:16}}>
+          {warehouses.map(w=>(
+            <div key={w.id} className="card">
+              <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:12}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:15}}>{w.name}</div>
+                  <div style={{fontSize:12,color:'var(--text3)',marginTop:2}}>{w.city}</div>
+                </div>
+                <span className={`badge badge-${w.active?'active':'inactive'}`}>{w.active?'Active':'Inactive'}</span>
+              </div>
+              <div style={{fontSize:13,color:'var(--text2)',lineHeight:1.6}}>
+                <div>📍 {w.address}</div>
+                <div>📮 {w.pincode}</div>
+                <div>📞 {w.phone}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal&&(
+        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h2>Add Pickup Location</h2>
+            <form onSubmit={submit}>
+              <div className="form-group"><label>Warehouse Name *</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></div>
+              <div className="form-row">
+                <div className="form-group"><label>City *</label><input value={form.city} onChange={e=>setForm({...form,city:e.target.value})} required/></div>
+                <div className="form-group"><label>Pincode *</label><input value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} required/></div>
+              </div>
+              <div className="form-group"><label>Full Address *</label><textarea value={form.address} onChange={e=>setForm({...form,address:e.target.value})} required rows={2} style={{resize:'vertical'}}/></div>
+              <div className="form-group"><label>Phone *</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} required/></div>
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
+                <button type="button" className="btn btn-secondary" onClick={()=>setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Add Warehouse</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientWallet({clientId,user}){
+  const [txns,setTxns]=useState(()=>WalletService.getTxns(clientId).sort((a,b)=>b.date-a.date));
+  const balance=AuthService.getUser(clientId)?.walletBalance||0;
+
+  return(
+    <div>
+      <div className="page-header"><h2>Wallet</h2></div>
+      <div className="wallet-balance">
+        <div className="label">Available Balance</div>
+        <div className="amount">{fmtCur(balance)}</div>
+        <div style={{marginTop:12,fontSize:13,color:'#a5b4fc'}}>
+          💡 Contact admin to add funds to your wallet
+        </div>
+      </div>
+      <div className="card">
+        <h3 style={{fontSize:15,fontWeight:600,marginBottom:16}}>Transaction History</h3>
+        {txns.length===0?(
+          <div className="empty-state"><div className="icon">💸</div><p>No transactions yet</p></div>
+        ):(
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Balance</th></tr></thead>
+              <tbody>
+                {txns.map(t=>(
+                  <tr key={t.id}>
+                    <td style={{fontSize:12,color:'var(--text3)'}}>{fmtDate(t.date)}</td>
+                    <td style={{maxWidth:280}}>{t.description}</td>
+                    <td><span className={`badge badge-${t.type}`}>{t.type==='credit'?'↑':'↓'} {t.type.toUpperCase()}</span></td>
+                    <td style={{fontFamily:'var(--mono)',fontWeight:600,color:t.type==='credit'?'var(--green)':'var(--red)'}}>
+                      {t.type==='credit'?'+':'-'}{fmtCur(t.amount)}
+                    </td>
+                    <td style={{fontFamily:'var(--mono)',color:'var(--text2)'}}>{fmtCur(t.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TrackingPage(){
+  const [awb,setAwb]=useState('');
+  const [result,setResult]=useState(null);
+  const [searched,setSearched]=useState(false);
+
+  function track(){
+    if(!awb.trim()){return;}
+    const shp=Storage.get('sf_shipments',[]).find(s=>s.awb===awb.trim());
+    if(shp){
+      const ord=OrderService.getById(shp.orderId);
+      setResult({shp,ord});
+    }else setResult(null);
+    setSearched(true);
+  }
+
+  const steps=['Order Placed','Picked Up','In Transit','Out for Delivery','Delivered'];
+  const statusIdx={pending:0,shipped:2,delivered:4,rto:1};
+
+  return(
+    <div>
+      <div className="page-header"><h2>Track Shipment</h2></div>
+      <div className="card" style={{marginBottom:20}}>
+        <div style={{display:'flex',gap:8}}>
+          <input className="search-bar" style={{flex:1,width:'auto'}} placeholder="Enter AWB number..." value={awb} onChange={e=>setAwb(e.target.value)} onKeyDown={e=>e.key==='Enter'&&track()}/>
+          <button className="btn btn-primary" onClick={track}>🔍 Track</button>
+        </div>
+      </div>
+
+      {searched&&!result&&(
+        <div className="empty-state"><div className="icon">🔍</div><p>No shipment found with AWB: {awb}</p></div>
+      )}
+
+      {result&&(
+        <div className="card">
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20,flexWrap:'wrap',gap:12}}>
+            <div>
+              <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>AWB Number</div>
+              <div style={{fontFamily:'var(--mono)',fontSize:18,fontWeight:600,color:'var(--accent2)'}}>{result.shp.awb}</div>
+            </div>
+            <StatusBadge status={result.shp.status}/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:16,marginBottom:24}}>
+            <div><div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>COURIER</div><div style={{fontWeight:500}}>{result.shp.courierName}</div></div>
+            <div><div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>CUSTOMER</div><div style={{fontWeight:500}}>{result.ord?.customerName}</div></div>
+            <div><div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>DESTINATION</div><div style={{fontWeight:500}}>{result.ord?.pincode}</div></div>
+            <div><div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>BOOKED ON</div><div style={{fontWeight:500}}>{fmtDate(result.shp.createdAt)}</div></div>
+          </div>
+          <div style={{position:'relative',paddingLeft:20}}>
+            <div style={{position:'absolute',left:8,top:8,bottom:8,width:2,background:'var(--border)'}}>
+              <div style={{width:'100%',background:'var(--accent)',height:`${(statusIdx[result.shp.status]||0)/4*100}%`}}/>
+            </div>
+            {steps.map((s,i)=>{
+              const done=i<=(statusIdx[result.shp.status]||0);
+              return(
+                <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',position:'relative'}}>
+                  <div style={{width:16,height:16,borderRadius:'50%',background:done?'var(--accent)':'var(--bg4)',border:`2px solid ${done?'var(--accent)':'var(--border)'}`,flexShrink:0,zIndex:1}}/>
+                  <div style={{color:done?'var(--text)':'var(--text3)',fontWeight:done?500:400,fontSize:14}}>{s}</div>
+                  {done&&i===(statusIdx[result.shp.status]||0)&&<span style={{fontSize:11,background:'var(--accent3)',color:'var(--accent2)',padding:'2px 8px',borderRadius:20,fontWeight:600}}>CURRENT</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   ADMIN PANEL
+   ============================================================ */
+function AdminApp(){
+  const {session,userData,refresh,logout}=useAuth();
+  const toast=useToast();
+  const [page,setPage]=useState('dashboard');
+  const [refreshKey,setRefreshKey]=useState(0);
+
+  const nav=[
+    {id:'dashboard',icon:'📊',label:'Dashboard'},
+    {section:'Management'},
+    {id:'clients',icon:'👥',label:'Clients'},
+    {id:'kyc',icon:'🪪',label:'KYC Control'},
+    {id:'wallet-ctrl',icon:'💳',label:'Wallet Control'},
+    {section:'Operations'},
+    {id:'all-shipments',icon:'🚚',label:'All Shipments'},
+    {id:'all-orders',icon:'📋',label:'All Orders'},
+    {id:'couriers',icon:'🏎️',label:'Couriers'},
+    {section:'System'},
+    {id:'logs',icon:'📜',label:'Order Logs'},
+  ];
+
+  const user=AuthService.getUser(session.userId);
+  const reloadPage=()=>setRefreshKey(k=>k+1);
+
+  const pages={
+    dashboard:<AdminDashboard key={refreshKey}/>,
+    clients:<AdminClients refresh={reloadPage} key={refreshKey}/>,
+    kyc:<AdminKYC refresh={reloadPage} key={refreshKey}/>,
+    'wallet-ctrl':<AdminWallet refresh={reloadPage} key={refreshKey}/>,
+    'all-shipments':<AdminShipments key={refreshKey}/>,
+    'all-orders':<AdminOrders key={refreshKey}/>,
+    couriers:<AdminCouriers key={refreshKey}/>,
+    logs:<AdminLogs key={refreshKey}/>,
+  };
+
+  return(
+    <div>
+      <Sidebar items={nav} logo="Admin Panel" active={page} setActive={setPage} user={user} logout={logout}/>
+      <div className="main-content">
+        <div className="topbar">
+          <h1>{nav.find(n=>n.id===page)?.label||'Admin Panel'}</h1>
+          <span style={{fontSize:12,background:'rgba(168,85,247,.15)',color:'var(--purple)',padding:'4px 12px',borderRadius:20,border:'1px solid rgba(168,85,247,.3)',fontWeight:600}}>👑 Admin</span>
+        </div>
+        <div className="page-content">
+          {pages[page]||<div className="empty-state"><div className="icon">🚧</div><p>Coming soon</p></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminDashboard(){
+  const users=Storage.get('sf_users',[]).filter(u=>u.role==='client');
+  const orders=OrderService.getAll();
+  const shipments=ShipmentService.getAll();
+  const revenue=shipments.reduce((a,s)=>a+(s.charge||0),0);
+
+  const stats=[
+    {icon:'👥',label:'Total Clients',value:users.length,color:'#a855f7',bg:'rgba(168,85,247,.1)'},
+    {icon:'📋',label:'Total Orders',value:orders.length,color:'#6366f1',bg:'rgba(99,102,241,.1)'},
+    {icon:'🚚',label:'Total Shipments',value:shipments.length,color:'#3b82f6',bg:'rgba(59,130,246,.1)'},
+    {icon:'💰',label:'Revenue',value:fmtCur(revenue),color:'#10b981',bg:'rgba(16,185,129,.1)'},
+  ];
+
+  const recentOrders=orders.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,8);
+
+  return(
+    <div>
+      <div className="stats-grid">
+        {stats.map(s=>(
+          <div key={s.label} className="stat-card">
+            <div className="stat-icon" style={{background:s.bg,color:s.color}}>{s.icon}</div>
+            <div>
+              <div className="stat-label">{s.label}</div>
+              <div className="stat-value" style={{fontSize:22,color:s.color}}>{s.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginTop:0}}>
+        <div className="card">
+          <h3 style={{fontSize:15,fontWeight:600,marginBottom:16}}>Order Status Distribution</h3>
+          {['pending','shipped','delivered','rto'].map(status=>{
+            const count=orders.filter(o=>o.status===status).length;
+            const pct=orders.length?Math.round(count/orders.length*100):0;
+            const colors={pending:'#f59e0b',shipped:'#3b82f6',delivered:'#10b981',rto:'#ef4444'};
+            return(
+              <div key={status} style={{marginBottom:12}}>
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:4}}>
+                  <span style={{textTransform:'capitalize',fontWeight:500}}>{status}</span>
+                  <span style={{color:'var(--text2)'}}>{count} ({pct}%)</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{width:`${pct}%`,background:colors[status]}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="card">
+          <h3 style={{fontSize:15,fontWeight:600,marginBottom:16}}>Client Overview</h3>
+          {users.map(u=>(
+            <div key={u.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'var(--accent3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'var(--accent2)',flexShrink:0}}>
+                {u.name?.[0]}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.name}</div>
+                <div style={{fontSize:11,color:'var(--text3)'}}>{u.company}</div>
+              </div>
+              <div style={{display:'flex',gap:6,flexShrink:0}}>
+                <span className={`badge badge-${u.kyc||'unverified'}`} style={{fontSize:10}}>{u.kyc||'pending'}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminClients({refresh}){
+  const toast=useToast();
+  const [clients,setClients]=useState(()=>Storage.get('sf_users',[]).filter(u=>u.role==='client'));
+  const [search,setSearch]=useState('');
+  const [showModal,setShowModal]=useState(false);
+  const [form,setForm]=useState({name:'',email:'',company:'',phone:''});
+
+  const reload=()=>setClients(Storage.get('sf_users',[]).filter(u=>u.role==='client'));
+  const filtered=clients.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||c.email.toLowerCase().includes(search.toLowerCase()));
+
+  function toggleClient(id){
+    AuthService.updateUser(id,{active:!AuthService.getUser(id)?.active});
+    reload();toast('Client status updated','success');
+  }
+
+  function createClient(e){
+    e.preventDefault();
+    const tempPass='temp'+Math.floor(Math.random()*9000+1000);
+    const u={id:genId('USR'),role:'client',password:tempPass,active:true,kyc:'pending',walletBalance:0,...form};
+    Storage.update('sf_users',us=>[...us,u]);
+    reload();refresh();
+    setShowModal(false);
+    setForm({name:'',email:'',company:'',phone:''});
+    toast(`Client created! Temp password: ${tempPass}`,'info');
+  }
+
+  return(
+    <div>
+      <div className="page-header">
+        <h2>Clients</h2>
+        <button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ Create Client</button>
+      </div>
+      <div style={{marginBottom:16}}>
+        <input className="search-bar" placeholder="Search by name or email..." value={search} onChange={e=>setSearch(e.target.value)}/>
+      </div>
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>KYC</th><th>Wallet</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {filtered.map(c=>(
+                <tr key={c.id}>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{width:28,height:28,borderRadius:'50%',background:'var(--accent3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'var(--accent2)',flexShrink:0}}>{c.name?.[0]}</div>
+                      {c.name}
+                    </div>
+                  </td>
+                  <td style={{color:'var(--text2)',fontSize:13}}>{c.email}</td>
+                  <td style={{fontSize:13}}>{c.company||'-'}</td>
+                  <td><span className={`badge badge-${c.kyc==='verified'?'verified':c.kyc==='rejected'?'rejected':'unverified'}`}>{c.kyc||'pending'}</span></td>
+                  <td style={{fontFamily:'var(--mono)',fontSize:13}}>{fmtCur(c.walletBalance||0)}</td>
+                  <td><span className={`badge badge-${c.active?'active':'inactive'}`}>{c.active?'Active':'Inactive'}</span></td>
+                  <td>
+                    <button className={`btn btn-xs ${c.active?'btn-danger':'btn-success'}`} onClick={()=>toggleClient(c.id)}>
+                      {c.active?'Disable':'Enable'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showModal&&(
+        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h2>Create New Client</h2>
+            <form onSubmit={createClient}>
+              <div className="form-row">
+                <div className="form-group"><label>Full Name *</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></div>
+                <div className="form-group"><label>Email *</label><input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Company</label><input value={form.company} onChange={e=>setForm({...form,company:e.target.value})}/></div>
+                <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></div>
+              </div>
+              <div style={{background:'var(--bg4)',borderRadius:'var(--radius)',padding:12,fontSize:13,color:'var(--text2)',marginBottom:16}}>
+                💡 A temporary password will be auto-generated and shown after creation.
+              </div>
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+                <button type="button" className="btn btn-secondary" onClick={()=>setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Create Client</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminKYC({refresh}){
+  const toast=useToast();
+  const [clients,setClients]=useState(()=>Storage.get('sf_users',[]).filter(u=>u.role==='client'));
+
+  const reload=()=>setClients(Storage.get('sf_users',[]).filter(u=>u.role==='client'));
+
+  function setKyc(id,status){
+    AuthService.updateUser(id,{kyc:status});
+    reload();refresh();
+    toast(`KYC ${status} for client`,'success');
+  }
+
+  return(
+    <div>
+      <div className="page-header"><h2>KYC Control</h2></div>
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Client</th><th>Email</th><th>Company</th><th>KYC Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {clients.map(c=>(
+                <tr key={c.id}>
+                  <td><strong>{c.name}</strong></td>
+                  <td style={{color:'var(--text2)',fontSize:13}}>{c.email}</td>
+                  <td>{c.company||'-'}</td>
+                  <td>
+                    <span className={`badge badge-${c.kyc==='verified'?'verified':c.kyc==='rejected'?'rejected':'unverified'}`}>
+                      {c.kyc==='verified'?'✓':c.kyc==='rejected'?'✕':'⏳'} {c.kyc||'pending'}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{display:'flex',gap:6}}>
+                      <button className="btn btn-xs btn-success" onClick={()=>setKyc(c.id,'verified')} disabled={c.kyc==='verified'}>Verify</button>
+                      <button className="btn btn-xs btn-danger" onClick={()=>setKyc(c.id,'rejected')} disabled={c.kyc==='rejected'}>Reject</button>
+                      <button className="btn btn-xs btn-secondary" onClick={()=>setKyc(c.id,'pending')} disabled={c.kyc==='pending'}>Pending</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminWallet({refresh}){
+  const toast=useToast();
+  const [clients,setClients]=useState(()=>Storage.get('sf_users',[]).filter(u=>u.role==='client'));
+  const [showModal,setShowModal]=useState(false);
+  const [selClient,setSelClient]=useState('');
+  const [amount,setAmount]=useState('');
+  const [type,setType]=useState('credit');
+  const [desc,setDesc]=useState('');
+  const [txTab,setTxTab]=useState(null);
+  const [txns,setTxns]=useState([]);
+
+  const reload=()=>setClients(Storage.get('sf_users',[]).filter(u=>u.role==='client'));
+
+  function submit(e){
+    e.preventDefault();
+    const amt=Number(amount);
+    if(!amt||!selClient){return;}
+    if(type==='credit')WalletService.credit(selClient,amt,desc||'Admin credit');
+    else WalletService.debit(selClient,amt,desc||'Admin debit');
+    reload();refresh();
+    setShowModal(false);setAmount('');setDesc('');
+    toast(`${type==='credit'?'Added':'Deducted'} ${fmtCur(amt)} ${type==='credit'?'to':'from'} wallet`,'success');
+  }
+
+  function viewTxns(clientId){
+    setTxTab(clientId);
+    setTxns(WalletService.getTxns(clientId).sort((a,b)=>b.date-a.date));
+  }
+
+  return(
+    <div>
+      <div className="page-header">
+        <h2>Wallet Control</h2>
+        <button className="btn btn-primary" onClick={()=>setShowModal(true)}>💳 Manage Wallet</button>
+      </div>
+      <div className="card" style={{padding:0,marginBottom:20}}>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Client</th><th>Company</th><th>Balance</th><th>KYC</th><th>Actions</th></tr></thead>
+            <tbody>
+              {clients.map(c=>(
+                <tr key={c.id}>
+                  <td><strong>{c.name}</strong></td>
+                  <td style={{color:'var(--text2)'}}>{c.company||'-'}</td>
+                  <td style={{fontFamily:'var(--mono)',fontWeight:600,color:c.walletBalance>0?'var(--green)':'var(--red)'}}>{fmtCur(c.walletBalance||0)}</td>
+                  <td><span className={`badge badge-${c.kyc==='verified'?'verified':c.kyc==='rejected'?'rejected':'unverified'}`}>{c.kyc||'pending'}</span></td>
+                  <td>
+                    <div style={{display:'flex',gap:6}}>
+                      <button className="btn btn-xs btn-success" onClick={()=>{setSelClient(c.id);setType('credit');setShowModal(true);}}>+ Add</button>
+                      <button className="btn btn-xs btn-danger" onClick={()=>{setSelClient(c.id);setType('debit');setShowModal(true);}}>- Deduct</button>
+                      <button className="btn btn-xs btn-secondary" onClick={()=>viewTxns(c.id)}>History</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {txTab&&(
+        <div className="card">
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+            <h3 style={{fontSize:15,fontWeight:600}}>Transaction History — {clients.find(c=>c.id===txTab)?.name}</h3>
+            <button className="btn btn-secondary btn-sm" onClick={()=>setTxTab(null)}>✕ Close</button>
+          </div>
+          {txns.length===0?<div className="empty-state"><div className="icon">💸</div><p>No transactions</p></div>:(
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Balance</th></tr></thead>
+                <tbody>
+                  {txns.map(t=>(
+                    <tr key={t.id}>
+                      <td style={{fontSize:12,color:'var(--text3)'}}>{fmtDate(t.date)}</td>
+                      <td>{t.description}</td>
+                      <td><span className={`badge badge-${t.type}`}>{t.type.toUpperCase()}</span></td>
+                      <td style={{fontFamily:'var(--mono)',color:t.type==='credit'?'var(--green)':'var(--red)',fontWeight:600}}>
+                        {t.type==='credit'?'+':'-'}{fmtCur(t.amount)}
+                      </td>
+                      <td style={{fontFamily:'var(--mono)',color:'var(--text2)'}}>{fmtCur(t.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showModal&&(
+        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h2>{type==='credit'?'Add Funds':'Deduct Funds'}</h2>
+            <form onSubmit={submit}>
+              <div className="form-group">
+                <label>Select Client *</label>
+                <select value={selClient} onChange={e=>setSelClient(e.target.value)} required>
+                  <option value="">-- Select Client --</option>
+                  {clients.map(c=><option key={c.id} value={c.id}>{c.name} ({fmtCur(c.walletBalance||0)})</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Transaction Type</label>
+                <select value={type} onChange={e=>setType(e.target.value)}>
+                  <option value="credit">Credit (Add Money)</option>
+                  <option value="debit">Debit (Deduct Money)</option>
+                </select>
+              </div>
+              <div className="form-group"><label>Amount (₹) *</label><input type="number" min="1" value={amount} onChange={e=>setAmount(e.target.value)} required placeholder="Enter amount"/></div>
+              <div className="form-group"><label>Description</label><input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Reason for transaction"/></div>
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
+                <button type="button" className="btn btn-secondary" onClick={()=>setShowModal(false)}>Cancel</button>
+                <button type="submit" className={`btn ${type==='credit'?'btn-success':'btn-danger'}`}>
+                  {type==='credit'?'Add Funds':'Deduct Funds'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminShipments(){
+  const toast=useToast();
+  const clients=Storage.get('sf_users',[]).filter(u=>u.role==='client');
+  const couriers=CourierService.getAll();
+  const [shipments,setShipments]=useState(()=>ShipmentService.getAll().sort((a,b)=>b.createdAt-a.createdAt));
+  const [filterStatus,setFilterStatus]=useState('all');
+  const [filterClient,setFilterClient]=useState('all');
+  const [filterCourier,setFilterCourier]=useState('all');
+
+  const reload=()=>setShipments(ShipmentService.getAll().sort((a,b)=>b.createdAt-a.createdAt));
+
+  const filtered=shipments
+    .filter(s=>filterStatus==='all'||s.status===filterStatus)
+    .filter(s=>filterClient==='all'||s.clientId===filterClient)
+    .filter(s=>filterCourier==='all'||s.courierId===filterCourier);
+
+  function updateStatus(id,status){
+    ShipmentService.updateStatus(id,status);
+    reload();
+    toast(`Shipment status updated to ${status}`,'success');
+  }
+
+  const clientName=id=>clients.find(c=>c.id===id)?.name||id;
+
+  return(
+    <div>
+      <div className="page-header"><h2>All Shipments</h2><span style={{color:'var(--text2)',fontSize:13}}>{filtered.length} records</span></div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+        <select className="search-bar" style={{width:'auto'}} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+          <option value="all">All Statuses</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="rto">RTO</option>
+        </select>
+        <select className="search-bar" style={{width:'auto'}} value={filterClient} onChange={e=>setFilterClient(e.target.value)}>
+          <option value="all">All Clients</option>
+          {clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select className="search-bar" style={{width:'auto'}} value={filterCourier} onChange={e=>setFilterCourier(e.target.value)}>
+          <option value="all">All Couriers</option>
+          {couriers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Shipment</th><th>AWB</th><th>Client</th><th>Courier</th><th>Status</th><th>Charge</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody>
+              {filtered.map(s=>(
+                <tr key={s.id}>
+                  <td><code style={{fontFamily:'var(--mono)',fontSize:12,color:'var(--accent2)'}}>{s.id}</code></td>
+                  <td><code style={{fontFamily:'var(--mono)',fontSize:12}}>{s.awb}</code></td>
+                  <td style={{fontSize:13}}>{clientName(s.clientId)}</td>
+                  <td>{s.courierName}</td>
+                  <td><StatusBadge status={s.status}/></td>
+                  <td style={{fontFamily:'var(--mono)'}}>{fmtCur(s.charge)}</td>
+                  <td style={{fontSize:12,color:'var(--text3)'}}>{fmtDate(s.createdAt)}</td>
+                  <td>
+                    <select style={{padding:'4px 8px',background:'var(--bg4)',border:'1px solid var(--border)',borderRadius:'var(--radius)',color:'var(--text)',fontSize:12}} value={s.status} onChange={e=>updateStatus(s.id,e.target.value)}>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="rto">RTO</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminOrders(){
+  const clients=Storage.get('sf_users',[]).filter(u=>u.role==='client');
+  const [orders,setOrders]=useState(()=>OrderService.getAll().sort((a,b)=>b.createdAt-a.createdAt));
+  const [filter,setFilter]=useState('all');
+
+  const filtered=filter==='all'?orders:orders.filter(o=>o.status===filter);
+  const clientName=id=>clients.find(c=>c.id===id)?.name||id;
+
+  return(
+    <div>
+      <div className="page-header"><h2>All Orders</h2></div>
+      <div className="tab-bar">
+        {['all','pending','shipped','delivered','rto'].map(t=>(
+          <div key={t} className={`tab${filter===t?' active':''}`} onClick={()=>setFilter(t)}>
+            {t.charAt(0).toUpperCase()+t.slice(1)}
+            <span style={{marginLeft:4,fontSize:10,opacity:.7}}>({t==='all'?orders.length:orders.filter(o=>o.status===t).length})</span>
+          </div>
+        ))}
+      </div>
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Order ID</th><th>Client</th><th>Customer</th><th>Pincode</th><th>COD</th><th>Weight</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              {filtered.map(o=>(
+                <tr key={o.id}>
+                  <td><code style={{fontFamily:'var(--mono)',fontSize:12,color:'var(--accent2)'}}>{o.id}</code></td>
+                  <td style={{fontSize:13,color:'var(--text2)'}}>{clientName(o.clientId)}</td>
+                  <td>{o.customerName}</td>
+                  <td>{o.pincode}</td>
+                  <td>{o.codAmount>0?fmtCur(o.codAmount):'Prepaid'}</td>
+                  <td>{o.weight}kg</td>
+                  <td><StatusBadge status={o.status}/></td>
+                  <td style={{fontSize:12,color:'var(--text3)'}}>{fmtDate(o.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminCouriers(){
+  const toast=useToast();
+  const [couriers,setCouriers]=useState(()=>CourierService.getAll());
+  const [showModal,setShowModal]=useState(false);
+  const [form,setForm]=useState({name:'',apiEndpoint:'',apiKey:'',ratePerKg:'',logo:'📦'});
+
+  const reload=()=>setCouriers(CourierService.getAll());
+
+  function submit(e){
+    e.preventDefault();
+    CourierService.create({...form,ratePerKg:Number(form.ratePerKg),active:true});
+    reload();
+    setShowModal(false);
+    setForm({name:'',apiEndpoint:'',apiKey:'',ratePerKg:'',logo:'📦'});
+    toast('Courier added!','success');
+  }
+
+  function toggle(id){
+    CourierService.toggle(id);
+    reload();
+    toast('Courier status updated','success');
+  }
+
+  return(
+    <div>
+      <div className="page-header">
+        <h2>Courier Management</h2>
+        <button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ Add Courier</button>
+      </div>
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Courier</th><th>API Endpoint</th><th>API Key</th><th>Rate/kg</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {couriers.map(c=>(
+                <tr key={c.id}>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{fontSize:20}}>{c.logo||'📦'}</span>
+                      <strong>{c.name}</strong>
+                    </div>
+                  </td>
+                  <td style={{fontSize:12,color:'var(--text2)',fontFamily:'var(--mono)',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.apiEndpoint}</td>
+                  <td style={{fontSize:12,fontFamily:'var(--mono)',color:'var(--text3)'}}>
+                    {c.apiKey?.replace(/.(?=.{4})/g,'•')}
+                  </td>
+                  <td style={{fontFamily:'var(--mono)',fontWeight:600}}>₹{c.ratePerKg}/kg</td>
+                  <td><span className={`badge badge-${c.active?'active':'inactive'}`}>{c.active?'Active':'Disabled'}</span></td>
+                  <td>
+                    <button className={`btn btn-xs ${c.active?'btn-danger':'btn-success'}`} onClick={()=>toggle(c.id)}>
+                      {c.active?'Disable':'Enable'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card" style={{marginTop:16}}>
+        <h3 style={{fontSize:15,fontWeight:600,marginBottom:12}}>Dynamic API Configuration</h3>
+        <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>Add courier API configs dynamically. The system calls these endpoints when creating shipments.</p>
+        <div style={{background:'var(--bg3)',borderRadius:'var(--radius)',padding:16,fontFamily:'var(--mono)',fontSize:12,color:'var(--text2)'}}>
+          <div style={{color:'var(--accent2)',marginBottom:8}}>// Dynamic Courier API Request Format</div>
+          <div>{`POST {apiEndpoint}/create-shipment`}</div>
+          <div style={{color:'var(--text3)',margin:'4px 0'}}>Headers: {`{ "Authorization": "Bearer {apiKey}" }`}</div>
+          <div>{`Body: { order_id, weight, pickup_pincode, delivery_pincode }`}</div>
+        </div>
+      </div>
+
+      {showModal&&(
+        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h2>Add New Courier</h2>
+            <form onSubmit={submit}>
+              <div className="form-row">
+                <div className="form-group"><label>Courier Name *</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/></div>
+                <div className="form-group"><label>Logo (emoji)</label><input value={form.logo} onChange={e=>setForm({...form,logo:e.target.value})} placeholder="📦"/></div>
+              </div>
+              <div className="form-group"><label>API Endpoint *</label><input value={form.apiEndpoint} onChange={e=>setForm({...form,apiEndpoint:e.target.value})} required placeholder="https://api.courier.com"/></div>
+              <div className="form-group"><label>API Key *</label><input value={form.apiKey} onChange={e=>setForm({...form,apiKey:e.target.value})} required placeholder="YOUR_API_KEY"/></div>
+              <div className="form-group"><label>Rate per kg (₹) *</label><input type="number" value={form.ratePerKg} onChange={e=>setForm({...form,ratePerKg:e.target.value})} required placeholder="40"/></div>
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:8}}>
+                <button type="button" className="btn btn-secondary" onClick={()=>setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Add Courier</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminLogs(){
+  const clients=Storage.get('sf_users',[]).filter(u=>u.role==='client');
+  const [logs,setLogs]=useState(()=>LogService.getAll().slice(0,200));
+  const [filter,setFilter]=useState('all');
+
+  const typeColors={order_created:'var(--accent2)',shipment_created:'var(--green)',status_changed:'var(--yellow)'};
+  const typeIcons={order_created:'📋',shipment_created:'🚀',status_changed:'🔄'};
+
+  const filtered=filter==='all'?logs:logs.filter(l=>l.type===filter);
+  const clientName=id=>clients.find(c=>c.id===id)?.name||id;
+
+  return(
+    <div>
+      <div className="page-header"><h2>Order Logs</h2></div>
+      <div className="tab-bar">
+        {['all','order_created','shipment_created','status_changed'].map(t=>(
+          <div key={t} className={`tab${filter===t?' active':''}`} onClick={()=>setFilter(t)}>
+            {typeIcons[t]||'📋'} {t==='all'?'All':t.replace(/_/g,' ')}
+          </div>
+        ))}
+      </div>
+      <div className="card" style={{padding:0}}>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Type</th><th>Client</th><th>Order</th><th>Message</th></tr></thead>
+            <tbody>
+              {filtered.map(l=>(
+                <tr key={l.id}>
+                  <td style={{fontSize:12,color:'var(--text3)',whiteSpace:'nowrap'}}>{fmtDate(l.date)}</td>
+                  <td>
+                    <span style={{fontSize:12,padding:'2px 8px',borderRadius:20,background:'var(--bg4)',color:typeColors[l.type]||'var(--text2)',fontWeight:600,border:'1px solid var(--border)'}}>
+                      {typeIcons[l.type]} {l.type?.replace(/_/g,' ')}
+                    </span>
+                  </td>
+                  <td style={{fontSize:13}}>{clientName(l.clientId)}</td>
+                  <td><code style={{fontFamily:'var(--mono)',fontSize:11,color:'var(--text3)'}}>{l.orderId}</code></td>
+                  <td style={{fontSize:13,color:'var(--text2)'}}>{l.msg}</td>
+                </tr>
+              ))}
+              {filtered.length===0&&(
+                <tr><td colSpan={5}><div className="empty-state"><div className="icon">📜</div><p>No logs found</p></div></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP ROOT
+   ============================================================ */
+function App(){
+  const {session}=useAuth();
+  if(!session)return<LoginPage/>;
+  if(session.role==='admin')return<AdminApp/>;
+  return<ClientApp/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ToastProvider>
+    <AuthProvider>
+      <App/>
+    </AuthProvider>
+  </ToastProvider>
+);
+</script>
+</body>
+</html>
